@@ -4,6 +4,20 @@ Bu proje Android + Termux ortamında Docker olmadan da çalışabilir.
 
 ## Başlatma
 
+### Tek komutla kurulum (önerilen)
+
+```bash
+bash scripts/setup_termux.sh
+```
+
+Kurulum sonrası:
+
+```bash
+./run_termux.sh
+```
+
+### Manuel başlatma
+
 ```bash
 export SITL_RUNTIME_MODE=host
 export SIM_VEHICLE_CMD=sim_vehicle.py
