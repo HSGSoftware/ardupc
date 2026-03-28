@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArduPilot SITL Simülatör Yönetimi</title>
     <meta name="description"
-        content="Docker container üzerinde çalışan ArduPilot SITL simülatörlerini yönetmek için web aracı">
+        content="Docker veya yerel host üzerinde çalışan ArduPilot SITL simülatörlerini yönetmek için web aracı">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -30,7 +30,7 @@
             </a>
             <div class="status-badge" id="containerStatusBadge">
                 <span class="dot"></span>
-                <span id="containerStatusText">Container Durumu</span>
+                <span id="containerStatusText">Çalışma Ortamı Durumu</span>
             </div>
         </div>
     </header>
@@ -44,15 +44,19 @@
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
 
-            <!-- Docker Config (Collapsible) -->
+            <!-- Runtime Config (Collapsible) -->
             <div class="sidebar-section">
                 <div class="sidebar-section-header" onclick="toggleSidebarSection(this)">
-                    <span>🐳 Docker Container</span>
+                    <span id="runtimeSectionTitle">🐳 Çalışma Ortamı</span>
                     <span class="sidebar-toggle">▾</span>
                 </div>
                 <div class="sidebar-section-body open">
                     <div class="form-group compact">
-                        <label>Docker Image</label>
+                        <label>Çalışma Modu</label>
+                        <input type="text" class="form-input" id="runtimeModeLabel" value="Docker" readonly>
+                    </div>
+                    <div class="form-group compact">
+                        <label>Docker Image (Docker modunda)</label>
                         <input type="text" class="form-input" id="dockerImage" value="ardupilot-sitl:final">
                     </div>
                     <div class="status-row">
@@ -393,6 +397,7 @@
     <script src="/static/app.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            if (window.innerWidth <= 900 || typeof Split === 'undefined') return;
             // Horizontal Split (Left / Right)
             Split(['.split-left', '.split-right'], {
                 sizes: [25, 75],

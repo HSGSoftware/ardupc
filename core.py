@@ -10,6 +10,7 @@ import signal
 import json
 import re
 import logging
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,9 @@ container_state = {
     'container_id': None,
     'status': 'stopped',
     'image': 'ardupilot-sitl:final',
-    'ports': { '5760': '5770', '14550/udp': '14551' }
+    'ports': { '5760': '5770', '14550/udp': '14551' },
+    'runtime_mode': 'docker',
+    'runtime_label': 'Docker',
 }
 
 drones = {}
@@ -32,6 +35,47 @@ flight_logger = None
 
 LOCATIONS_FILE = os.path.join(os.path.dirname(__file__), 'saved_locations.json')
 SCENARIOS_FILE = os.path.join(os.path.dirname(__file__), 'scenarios.json')
+SIM_VEHICLE_CMD = os.getenv('SIM_VEHICLE_CMD', 'sim_vehicle.py')
+RUNTIME_MODE = os.getenv('SITL_RUNTIME_MODE', 'auto').strip().lower()
+
+
+def detect_runtime_mode():
+    docker_exists = shutil.which('docker') is not None
+    if RUNTIME_MODE == 'docker':
+        return 'docker' if docker_exists else 'host'
+    if RUNTIME_MODE == 'host':
+        return 'host'
+    return 'docker' if docker_exists else 'host'
+
+
+def is_docker_runtime():
+    mode = detect_runtime_mode()
+    container_state['runtime_mode'] = mode
+    container_state['runtime_label'] = 'Docker' if mode == 'docker' else 'Yerel (Termux/Host)'
+    return mode == 'docker'
+
+
+def resolve_sim_vehicle_cmd():
+    """
+    Host modunda sim_vehicle komutunu daha toleranslı çöz.
+    - Kullanıcı SIM_VEHICLE_CMD verdiyse onu kullan.
+    - Aksi halde bilinen path'leri dene.
+    """
+    cmd = (SIM_VEHICLE_CMD or '').strip()
+    if cmd and cmd != 'sim_vehicle.py':
+        return cmd
+
+    candidates = [
+        'sim_vehicle.py',
+        os.path.join(os.getcwd(), 'Tools', 'autotest', 'sim_vehicle.py'),
+        os.path.expanduser('~/ardupilot/Tools/autotest/sim_vehicle.py'),
+    ]
+    for c in candidates:
+        if c == 'sim_vehicle.py' and shutil.which('sim_vehicle.py'):
+            return c
+        if c != 'sim_vehicle.py' and os.path.exists(c):
+            return f'python3 "{c}"'
+    return cmd or 'sim_vehicle.py'
 
 
 def init_services(_socketio, _mavlink_svc, _flight_logger):
@@ -258,7 +302,8 @@ def _start_drone_process(instance_id, ip_addresses, vehicle_type, custom_locatio
     out_params = ' '.join([f'--out=udp:{ip}' for ip in ip_addresses])
     if mavlink_svc and mavlink_svc.available:
         out_params += f' --out=udp:{mavlink_svc.get_out_address(instance_id)}'
-    sim_cmd = f'Tools/autotest/sim_vehicle.py -v {vehicle_type} -I{instance_id} --no-rebuild {out_params}'
+    sim_vehicle_cmd = SIM_VEHICLE_CMD if is_docker_runtime() else resolve_sim_vehicle_cmd()
+    sim_cmd = f'{sim_vehicle_cmd} -v {vehicle_type} -I{instance_id} --no-rebuild {out_params}'
 
     if custom_location:
         if isinstance(custom_location, str):
@@ -271,7 +316,10 @@ def _start_drone_process(instance_id, ip_addresses, vehicle_type, custom_locatio
             if lat and lng:
                 sim_cmd += f' --custom-location={lat},{lng},{alt},{heading}'
 
-    exec_cmd = ['docker', 'exec', '-i', container_state['container_id'], 'bash', '-c', sim_cmd]
+    if is_docker_runtime():
+        exec_cmd = ['docker', 'exec', '-i', container_state['container_id'], 'bash', '-lc', sim_cmd]
+    else:
+        exec_cmd = ['bash', '-lc', sim_cmd]
 
     try:
         process = subprocess.Popen(
@@ -364,6 +412,12 @@ def _stop_drone(drone_id):
 
 
 def check_container_status():
+    if not is_docker_runtime():
+        container_state['container_id'] = 'host-runtime'
+        container_state['status'] = 'running'
+        container_state['cpu'] = '-'
+        container_state['memory'] = '-'
+        return container_state['status']
     try:
         container_id = container_state.get('container_id')
         if not container_id:

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 import subprocess
-from core import container_state, drones, drone_lock, _stop_drone, check_container_status
+from core import container_state, drones, drone_lock, _stop_drone, check_container_status, is_docker_runtime
 
 container_bp = Blueprint('container', __name__)
 
@@ -8,11 +8,22 @@ container_bp = Blueprint('container', __name__)
 @container_bp.route('/api/container/status', methods=['GET'])
 def api_container_status():
     status = check_container_status()
-    return jsonify({'status': status, 'container_id': container_state['container_id'], 'image': container_state['image']})
+    return jsonify({
+        'status': status,
+        'container_id': container_state['container_id'],
+        'image': container_state['image'],
+        'runtime_mode': container_state.get('runtime_mode', 'docker'),
+        'runtime_label': container_state.get('runtime_label', 'Docker')
+    })
 
 
 @container_bp.route('/api/container/start', methods=['POST'])
 def api_container_start():
+    if not is_docker_runtime():
+        container_state['status'] = 'running'
+        container_state['container_id'] = 'host-runtime'
+        return jsonify({'success': True, 'container_id': container_state['container_id'], 'message': 'Yerel çalışma modu aktif'})
+
     if container_state['status'] == 'running':
         return jsonify({'success': False, 'message': 'Container zaten çalışıyor'}), 400
     data = request.json or {}
@@ -44,6 +55,12 @@ def api_container_start():
 
 @container_bp.route('/api/container/stop', methods=['POST'])
 def api_container_stop():
+    if not is_docker_runtime():
+        with drone_lock:
+            for did in list(drones.keys()):
+                _stop_drone(did)
+        return jsonify({'success': True, 'message': 'Yerel çalışma modunda çalışan drone süreçleri durduruldu'})
+
     if container_state['status'] != 'running':
         return jsonify({'success': False, 'message': 'Çalışan container yok'}), 400
     with drone_lock:

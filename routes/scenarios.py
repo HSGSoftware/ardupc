@@ -90,7 +90,7 @@ def api_load_scenario():
     if name not in scenarios:
         return jsonify({'success': False, 'message': 'Senaryo bulunamadı'}), 404
     if container_state['status'] != 'running':
-        return jsonify({'success': False, 'message': 'Container çalışmıyor'}), 400
+        return jsonify({'success': False, 'message': 'Simülatör çalışma ortamı aktif değil'}), 400
 
     with drone_lock:
         active_ids = list(drones.keys())

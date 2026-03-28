@@ -43,6 +43,7 @@ body {
     background: var(--bg-primary);
     color: var(--text);
     height: 100vh;
+    min-height: 100dvh;
     overflow: hidden;
 }
 
@@ -62,6 +63,7 @@ body {
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
     z-index: 50;
+    padding-top: env(safe-area-inset-top, 0);
 }
 
 .header-left {
@@ -152,7 +154,7 @@ body {
 .dashboard {
     display: grid;
     grid-template-columns: 280px 1fr;
-    height: calc(100vh - 48px);
+    height: calc(100dvh - 48px - env(safe-area-inset-top, 0));
     overflow: hidden;
 }
 
@@ -1398,7 +1400,7 @@ select.form-input {
         top: 0;
         left: -300px;
         width: 290px;
-        height: 100vh;
+        height: 100dvh;
         z-index: 100;
         padding-top: 56px;
         transition: left 0.3s var(--ease);
@@ -1417,7 +1419,7 @@ select.form-input {
     .split-left {
         border-right: none;
         border-bottom: 1px solid var(--border);
-        max-height: 40vh;
+        max-height: 45dvh;
     }
 
     .modal {
@@ -1440,12 +1442,50 @@ select.form-input {
 }
 
 @media (max-width: 600px) {
+    .header {
+        height: auto;
+        min-height: 48px;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px 10px;
+    }
+
+    .header-right {
+        width: 100%;
+        gap: 6px;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .header-right .btn {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .status-badge {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .dashboard {
+        height: calc(100dvh - 64px - env(safe-area-inset-top, 0));
+    }
+
     .header h1 {
         font-size: 13px;
     }
 
     .split-view {
         grid-template-columns: 1fr;
+    }
+
+    .all-drones-table {
+        font-size: 10px;
+    }
+
+    .all-drones-table th,
+    .all-drones-table td {
+        padding: 6px 5px;
     }
 
     .modal {

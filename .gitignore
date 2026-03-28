@@ -1,0 +1,11 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Runtime data
+*.db
+data/*.db
+
+# Virtual env
+.venv/
+venv/
