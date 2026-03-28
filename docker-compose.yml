@@ -1,0 +1,23 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+      - ./saved_locations.json:/app/saved_locations.json
+      - ./scenarios.json:/app/scenarios.json
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - FLASK_ENV=development
+    restart: unless-stopped
+    depends_on:
+      - sitl
+
+  sitl:
+    image: ardupilot-sitl:final
+    ports:
+      - "5770:5760"
+      - "14551:14550/udp"
+    command: bash -c "tail -f /dev/null"
+    restart: unless-stopped

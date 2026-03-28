@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uçuş Kontrol Haritası</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="/static/map.css">
+</head>
+<body>
+    <div class="map-layout">
+        <header class="map-header">
+            <h1>🛸 Uçuş Kontrol Merkezi</h1>
+            <div class="header-actions">
+                <button class="btn-header" onclick="fitAllDrones()" title="Tüm drone'ları gör">📍 Fit</button>
+                <button class="btn-header" onclick="cycleMapLayer()" title="Harita katmanı değiştir">🗺️ Katman</button>
+                <button class="btn-header" onclick="togglePanel('controlPanel')">⚙️ Sol</button>
+                <button class="btn-header" onclick="togglePanel('telemetryPanel')">🚁 Sağ</button>
+            </div>
+            <div class="header-status">
+                <span class="status-dot" id="connectionDot"></span>
+                <span id="connectionText">Bağlanıyor...</span>
+                <span class="drone-count" id="droneCount">0 drone</span>
+            </div>
+        </header>
+
+        <main class="map-main">
+            <!-- Sol: Waypoint + Toplu komutlar -->
+            <aside class="modular-panel control-panel" id="controlPanel">
+                <div class="panel-tabs">
+                    <button class="tab-btn active" data-tab="waypoint">📍 Waypoint</button>
+                    <button class="tab-btn" data-tab="batch">⚡ Toplu</button>
+                    <button class="tab-btn" data-tab="mission">📋 Görev</button>
+                </div>
+
+                <div class="tab-content active" id="tabWaypoint">
+                    <p class="hint-small">Haritada tıklayın → Hedefi drone'a atayın veya GOTO</p>
+                    <div class="input-row">
+                        <label>Yükseklik (m)</label>
+                        <input type="number" id="gotoAlt" value="30" min="1" max="500">
+                    </div>
+                    <div class="waypoint-preview" id="waypointPreview"><span class="muted">Hedef yok</span></div>
+                    <div class="btn-row">
+                        <button class="ctrl-btn goto" onclick="sendGotoToTarget()">🎯 Seçiliye GOTO</button>
+                        <button class="ctrl-btn" onclick="addWaypointToList()">➕ Listeye</button>
+                    </div>
+                    <div class="assign-section">
+                        <div class="section-label">Hedefi ata:</div>
+                        <div id="assignDroneButtons" class="assign-buttons"></div>
+                    </div>
+                    <div class="assignments-section">
+                        <div class="waypoint-list-header">
+                            <span>Drone hedefleri (ayrı ayrı)</span>
+                            <button class="btn-icon-sm" onclick="sendGotoAllAssigned()" title="Tüm atanmışlara GOTO">▶</button>
+                        </div>
+                        <div id="droneAssignments"></div>
+                    </div>
+                    <div class="waypoint-list-header">
+                        <span>Waypoint Listesi (mission)</span>
+                        <button class="btn-icon-sm" onclick="clearWaypointList()" title="Temizle">🗑</button>
+                    </div>
+                    <ul id="waypointList" class="waypoint-list"></ul>
+                    <button class="ctrl-btn btn-block" onclick="sendMissionGoto()">▶ Mission GOTO</button>
+                </div>
+
+                <div class="tab-content" id="tabBatch">
+                    <p class="hint-small">Tüm drone'lara komut</p>
+                    <div class="mode-grid">
+                        <button class="mode-btn" data-mode="GUIDED">GUIDED</button>
+                        <button class="mode-btn" data-mode="LOITER">LOITER</button>
+                        <button class="mode-btn" data-mode="RTL">RTL</button>
+                        <button class="mode-btn" data-mode="LAND">LAND</button>
+                    </div>
+                    <div class="btn-row">
+                        <button class="ctrl-btn arm" onclick="sendCmdBatch('arm throttle')">🔓 ARM</button>
+                        <button class="ctrl-btn disarm" onclick="sendCmdBatch('disarm')">🔒 DISARM</button>
+                    </div>
+                    <div class="input-row">
+                        <label>Takeoff Yükseklik (m)</label>
+                        <input type="number" id="takeoffAltBatch" value="20">
+                    </div>
+                    <button class="ctrl-btn btn-block" onclick="sendTakeoffBatch()">🛫 Tümüne Takeoff</button>
+                </div>
+
+                <div class="tab-content" id="tabMission">
+                    <p class="hint-small">Sıralı görev komutları oluşturun</p>
+                    <div class="mission-builder" id="missionBuilder">
+                        <div class="mission-steps" id="missionSteps"></div>
+                        <div class="mission-add-row">
+                            <select id="missionCmdType" class="mission-select">
+                                <option value="takeoff">Takeoff</option>
+                                <option value="waypoint">Waypoint (haritadan)</option>
+                                <option value="loiter">Loiter (bekle)</option>
+                                <option value="rtl">RTL</option>
+                                <option value="land">Land</option>
+                                <option value="mode">Mod Değiştir</option>
+                            </select>
+                            <button class="ctrl-btn" onclick="addMissionStep()">➕ Ekle</button>
+                        </div>
+                        <div class="mission-params" id="missionParams">
+                            <div class="input-row">
+                                <label>Yükseklik (m)</label>
+                                <input type="number" id="missionAlt" value="30" min="1" max="500">
+                            </div>
+                            <div class="input-row" id="missionLoiterRow" style="display:none">
+                                <label>Bekleme (sn)</label>
+                                <input type="number" id="missionLoiterTime" value="10" min="1" max="300">
+                            </div>
+                            <div class="input-row" id="missionModeRow" style="display:none">
+                                <label>Mod</label>
+                                <select id="missionModeSelect" class="mission-select">
+                                    <option value="GUIDED">GUIDED</option>
+                                    <option value="LOITER">LOITER</option>
+                                    <option value="AUTO">AUTO</option>
+                                    <option value="RTL">RTL</option>
+                                    <option value="LAND">LAND</option>
+                                    <option value="POSHOLD">POSHOLD</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="btn-row" style="margin-top:8px;">
+                        <button class="ctrl-btn btn-block goto" onclick="executeMission()">▶ Görevi Çalıştır</button>
+                        <button class="ctrl-btn" onclick="clearMission()">🗑 Temizle</button>
+                    </div>
+                </div>
+            </aside>
+
+            <div id="flightMap" class="map-container"></div>
+
+            <aside class="modular-panel telemetry-panel" id="telemetryPanel">
+                <div class="panel-header" onclick="togglePanel('telemetryPanel')">
+                    <span>🚁 Drone Durumları</span>
+                    <span class="toggle-icon">▾</span>
+                </div>
+                <div class="panel-body" id="telemetryPanelBody">
+                    <div class="drone-cards" id="droneCards">
+                        <p class="hint">Henüz drone yok</p>
+                    </div>
+                    <div class="chart-section" id="chartSection" style="display:none;">
+                        <div class="chart-header">
+                            <span>📊 Telemetri Grafikleri</span>
+                            <select id="chartDroneSelect" class="chart-select" onchange="updateCharts()"></select>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="altChart" height="120"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="speedChart" height="120"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="batteryChart" height="100"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="/static/map.js"></script>
+</body>
+</html>

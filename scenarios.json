@@ -1,0 +1,114 @@
+{
+  "test": [
+    {
+      "instance_id": 0,
+      "vehicle_type": "ArduCopter",
+      "ip_addresses": [
+        "127.0.0.1:14550"
+      ],
+      "lat": -35.3624130279891,
+      "lng": 149.1651099860799,
+      "name": "harun"
+    },
+    {
+      "instance_id": 1,
+      "vehicle_type": "ArduCopter",
+      "ip_addresses": [
+        "127.0.0.1:14560"
+      ],
+      "lat": -35.36276318699128,
+      "lng": 149.16167506349439,
+      "name": "mahmut"
+    },
+    {
+      "instance_id": 2,
+      "vehicle_type": "ArduCopter",
+      "ip_addresses": [
+        "127.0.0.1:14570"
+      ],
+      "lat": -35.3653893310986,
+      "lng": 149.16373601704566,
+      "name": "mustafa"
+    }
+  ],
+  "test2": [
+    {
+      "instance_id": 0,
+      "vehicle_type": "ArduCopter",
+      "ip_addresses": [
+        "127.0.0.1:14550"
+      ],
+      "lat": -35.3624130279891,
+      "lng": 149.1651099860799,
+      "name": "harun"
+    },
+    {
+      "instance_id": 1,
+      "vehicle_type": "ArduCopter",
+      "ip_addresses": [
+        "127.0.0.1:14560"
+      ],
+      "lat": -35.36276318699128,
+      "lng": 149.16167506349439,
+      "name": "mahmut"
+    },
+    {
+      "instance_id": 2,
+      "vehicle_type": "ArduCopter",
+      "ip_addresses": [
+        "127.0.0.1:14570"
+      ],
+      "lat": -35.3653893310986,
+      "lng": 149.16373601704566,
+      "name": "mustafa"
+    }
+  ],
+  "süleyman abi test": [
+    {
+      "instance_id": 0,
+      "vehicle_type": "ArduCopter",
+      "ip_addresses": [
+        "127.0.0.1:14550",
+        "192.168.1.38:14550"
+      ],
+      "lat": -35.362200876547405,
+      "lng": 149.16508270768315,
+      "name": ""
+    },
+    {
+      "instance_id": 2,
+      "vehicle_type": "ArduCopter",
+      "ip_addresses": [
+        "127.0.0.1:14560",
+        "192.168.1.38:14560"
+      ],
+      "lat": -35.362443421674044,
+      "lng": 149.16508270768315,
+      "name": ""
+    }
+  ],
+  "hhhh": [
+    {
+      "instance_id": 0,
+      "vehicle_type": "ArduCopter",
+      "ip_addresses": [
+        "127.0.0.1:14550",
+        "192.168.1.38:14550"
+      ],
+      "lat": -35.362200876547405,
+      "lng": 149.16508270768315,
+      "name": ""
+    },
+    {
+      "instance_id": 2,
+      "vehicle_type": "ArduCopter",
+      "ip_addresses": [
+        "127.0.0.1:14560",
+        "192.168.1.38:14560"
+      ],
+      "lat": -35.362443421674044,
+      "lng": 149.16508270768315,
+      "name": ""
+    }
+  ]
+}

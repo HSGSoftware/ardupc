@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArduPilot SITL Simülatör Yönetimi</title>
+    <meta name="description"
+        content="Docker container üzerinde çalışan ArduPilot SITL simülatörlerini yönetmek için web aracı">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menü">
+                <span></span><span></span><span></span>
+            </button>
+            <div class="logo">✈</div>
+            <h1>ArduPilot SITL Manager</h1>
+        </div>
+        <div class="header-right">
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('shortcutsModalOverlay').classList.add('active')" style="margin-right:6px;" title="Klavye Kısayolları">⌨️</button>
+            <a href="/map" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="margin-right:10px; text-decoration:none;"
+                onclick="event.preventDefault(); window.open('/map','flightmap','width=1200,height=800,menubar=no,toolbar=no,location=no');">
+                🗺️ Haritayı Aç
+            </a>
+            <div class="status-badge" id="containerStatusBadge">
+                <span class="dot"></span>
+                <span id="containerStatusText">Container Durumu</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Dashboard -->
+    <div class="dashboard">
+
+        <!-- Sidebar Overlay (mobil) -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+
+            <!-- Docker Config (Collapsible) -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-header" onclick="toggleSidebarSection(this)">
+                    <span>🐳 Docker Container</span>
+                    <span class="sidebar-toggle">▾</span>
+                </div>
+                <div class="sidebar-section-body open">
+                    <div class="form-group compact">
+                        <label>Docker Image</label>
+                        <input type="text" class="form-input" id="dockerImage" value="ardupilot-sitl:final">
+                    </div>
+                    <div class="status-row">
+                        <div>
+                            <span class="label">Durum</span>
+                            <span class="value stopped" id="containerStatusValue">Durduruldu</span>
+                        </div>
+                        <div>
+                            <span class="label">ID</span>
+                            <span class="value mono" id="containerIdValue">-</span>
+                        </div>
+                        <div>
+                            <span class="label">CPU</span>
+                            <span class="value mono" id="containerCpuValue">0%</span>
+                        </div>
+                        <div>
+                            <span class="label">RAM</span>
+                            <span class="value mono" id="containerMemValue">-</span>
+                        </div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn btn-success btn-sm" id="btnContainerStart" onclick="startContainer()">▶
+                            Başlat</button>
+                        <button class="btn btn-danger btn-sm" id="btnContainerStop" onclick="stopContainer()" disabled>⏹
+                            Durdur</button>
+                    </div>
+                    <details class="port-details">
+                        <summary>Port Mapping</summary>
+                        <div class="port-list" id="portList"></div>
+                        <button class="btn-link" onclick="addPortRow()">+ Port Ekle</button>
+                    </details>
+                </div>
+            </div>
+
+            <!-- Drone Oluştur (Collapsible) -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-header" onclick="toggleSidebarSection(this)">
+                    <span>🚁 Drone Oluştur</span>
+                    <span class="sidebar-toggle">▾</span>
+                </div>
+                <div class="sidebar-section-body">
+                    <div class="form-group compact">
+                        <label>Araç Tipi</label>
+                        <select class="form-input" id="vehicleType">
+                            <option value="ArduCopter" selected>ArduCopter</option>
+                            <option value="ArduPlane">ArduPlane</option>
+                            <option value="APMrover2">APMrover2</option>
+                            <option value="ArduSub">ArduSub</option>
+                        </select>
+                    </div>
+                    <div class="form-group compact">
+                        <label>Drone İsmi</label>
+                        <input type="text" class="form-input" id="droneName" placeholder="ör: Alpha, Keşif-1...">
+                    </div>
+                    <div class="form-group compact">
+                        <label>Hedef IP:Port</label>
+                        <div class="ip-list" id="ipList"></div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn-link" onclick="addIpRow()">+ IP Ekle</button>
+                            <button class="btn-link" onclick="addExtraPortRow()">+ Port Ekle</button>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group compact" style="flex:1;">
+                            <label>Base Port</label>
+                            <input type="number" class="form-input" id="basePort" value="14550">
+                        </div>
+                        <div class="form-group compact" style="flex:1;">
+                            <label>Port Artış</label>
+                            <input type="number" class="form-input" id="portStep" value="10">
+                        </div>
+                    </div>
+                    <div class="form-group compact">
+                        <label>Başlangıç Koordinatı</label>
+                        <div class="coord-btn" onclick="openMapModal()">
+                            <span>📍</span>
+                            <span id="coordText" class="mono">-35.363261, 149.165230</span>
+                            <span class="edit-hint">🗺️</span>
+                        </div>
+                        <input type="hidden" id="startLat" value="-35.363261">
+                        <input type="hidden" id="startLng" value="149.165230">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group compact" style="flex:1;">
+                            <label>Yükseklik (m)</label>
+                            <input type="number" class="form-input" id="startAlt" placeholder="0">
+                        </div>
+                        <div class="form-group compact" style="flex:1;">
+                            <label>Heading (°)</label>
+                            <input type="number" class="form-input" id="startHeading" placeholder="0">
+                        </div>
+                    </div>
+                    <div class="next-drone-info" id="autoCalcInfo">
+                        Sonraki: <span id="nextDroneInfo">I0 → port 14550</span>
+                    </div>
+                    <button class="btn btn-primary btn-block" id="btnStartDrone" onclick="startDrone()">
+                        🚀 Drone Başlat
+                    </button>
+                </div>
+            </div>
+
+            <!-- Senaryolar -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-header" onclick="toggleSidebarSection(this)">
+                    <span>📁 Senaryolar</span>
+                    <span class="sidebar-toggle">▾</span>
+                </div>
+                <div class="sidebar-section-body">
+                    <div class="form-group compact">
+                        <input type="text" class="form-input" id="scenarioNameInput" placeholder="Senaryo ismi...">
+                        <button class="btn btn-primary btn-block btn-sm" onclick="saveScenario()"
+                            style="margin-top:4px;">💾 Kaydet</button>
+                    </div>
+                    <div id="scenarioList" class="scenario-list"
+                        style="margin-top:10px; max-height:200px; overflow-y:auto;">
+                    </div>
+                    <div class="export-import-row" style="margin-top:8px; display:flex; gap:4px; flex-wrap:wrap;">
+                        <button class="btn btn-outline btn-sm" onclick="exportScenarios()" title="Senaryoları dışa aktar">📤 Dışa Aktar</button>
+                        <label class="btn btn-outline btn-sm" style="cursor:pointer;" title="Senaryoları içe aktar">📥 İçe Aktar
+                            <input type="file" accept=".json" onchange="importScenarios(this)" style="display:none;">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mini Harita -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-header" onclick="toggleSidebarSection(this)">
+                    <span>🗺️ Mini Harita</span>
+                    <span class="sidebar-toggle">▾</span>
+                </div>
+                <div class="sidebar-section-body">
+                    <div id="miniMapContainer" style="height:180px; border-radius:6px; overflow:hidden;"></div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Main Area -->
+        <main class="main-area">
+            <!-- Split View — sol: sadece durum listesi, sağ: kontroller + terminal -->
+            <div class="split-view" id="mainSplitView">
+                <!-- Sol Panel: Sadece Durum Listesi -->
+                <div class="split-left" style="overflow-y:auto;">
+                    <div class="panel-header" style="flex-shrink:0;">
+                        <span>📋 Drone Listesi <span class="count-badge" id="droneCount"
+                                style="display:none">0</span></span>
+                    </div>
+
+                    <div style="padding:8px; border-bottom:1px solid var(--border);">
+                        <button class="btn btn-outline btn-block btn-sm" id="allDronesNavBtn"
+                            onclick="selectView('__all__')"
+                            style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                            <span>🌐</span> Tüm Drone'lar (Toplu Kontrol)
+                        </button>
+                    </div>
+
+                    <div class="panel-content" id="allDronesStatusTable" style="flex:1; overflow-y:auto; padding:0;">
+                        <div class="empty-list">Henüz drone yok</div>
+                    </div>
+                </div>
+
+                <!-- Sağ Panel: Kontrol + Terminal -->
+                <div class="split-right">
+                    <!-- Sağ Üst: Kontrol Paneli -->
+                    <div class="right-top-panel"
+                        style="flex:1; display:flex; flex-direction:column; overflow:hidden; border-bottom:1px solid var(--border);">
+                        <div class="panel-header" id="rightPanelHeader">
+                            <span>⚡ Toplu Kontrol</span>
+                        </div>
+                        <div class="panel-content" id="rightPanelContent"
+                            style="flex:1; overflow-y:auto; padding:10px;"></div>
+                    </div>
+
+                    <!-- Sağ Alt: Terminal / Log -->
+                    <div class="right-bottom-panel"
+                        style="height:35%; display:flex; flex-direction:column; overflow:hidden; min-height:150px;">
+                        <div class="panel-header"
+                            style="background:var(--bg-terminal); border-top:1px solid var(--border); padding:4px 8px; font-size:12px;">
+                            <span>💻 Terminal / Log</span>
+                        </div>
+                        <div id="rightTerminalContent"
+                            style="flex:1; overflow-y:auto; background:var(--bg-terminal); color:#ddd; font-family:'JetBrains Mono', monospace; padding:8px; font-size:12px; white-space:pre-wrap;">
+                            <div style="color:#666; text-align:center; padding:20px;">Terminal çıktısı için sol listeden
+                                bir drone seçin</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- Harita Modal (başlangıç konumu) -->
+    <div class="modal-overlay" id="mapModalOverlay" onclick="closeMapModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>📍 Başlangıç Konumu Seç</h3>
+                <div class="modal-header-right">
+                    <span id="mapCoordDisplay" class="mono"></span>
+                    <button class="btn-icon" onclick="closeMapModal()">✕</button>
+                </div>
+            </div>
+            <div id="mapContainer" class="modal-map"></div>
+            <div class="modal-footer">
+                <div class="map-legend">
+                    🖱️ Tıklayarak seçin &nbsp;
+                    <span style="color:var(--green);">●</span> Drone &nbsp;
+                    <span style="color:var(--blue);">●</span> Yeni konum
+                </div>
+
+                <!-- Hassas Konumlandırma -->
+                <div class="nudge-bar"
+                    style="display:flex; align-items:center; gap:8px; margin-top:6px; padding-top:6px; border-top:1px dashed var(--border);">
+                    <div style="font-size:11px; color:#666;">Hassas (m):</div>
+                    <input type="number" id="nudgeDistStart" value="1" min="0.1" step="0.1"
+                        style="width:50px; padding:2px; font-size:12px;">
+
+                    <div style="display:flex; gap:2px;">
+                        <button class="btn btn-outline btn-sm" style="padding:0 6px;"
+                            onclick="nudgeStartMap(270)">⬅</button>
+                        <button class="btn btn-outline btn-sm" style="padding:0 6px;"
+                            onclick="nudgeStartMap(0)">⬆</button>
+                        <button class="btn btn-outline btn-sm" style="padding:0 6px;"
+                            onclick="nudgeStartMap(180)">⬇</button>
+                        <button class="btn btn-outline btn-sm" style="padding:0 6px;"
+                            onclick="nudgeStartMap(90)">➡</button>
+                    </div>
+
+                    <div style="flex:1;"></div>
+                    <select id="refDroneSelect" class="form-input compact-select" onchange="useRefDroneLocation()"
+                        style="width:130px;">
+                        <option value="">Drone'dan Kopyala</option>
+                    </select>
+                </div>
+                <div class="saved-locations-bar">
+                    <select id="savedLocSelect" class="form-input compact-select"
+                        onchange="applySavedLocation(this.value, 'start')">
+                        <option value="">📌 Kayıtlı Konumlar</option>
+                    </select>
+                    <button class="btn btn-outline btn-sm" onclick="saveCurrentLocation('start')"
+                        title="Bu konumu kaydet">💾</button>
+                    <button class="btn btn-outline btn-sm" onclick="deleteSelectedLocation('savedLocSelect')"
+                        title="Seçili konumu sil" style="color:var(--red)">🗑️</button>
+                </div>
+                <button class="btn btn-primary" onclick="confirmMapLocation()">✅ Onayla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Goto Harita Modal -->
+    <div class="modal-overlay" id="gotoMapOverlay" onclick="closeGotoMapModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>🎯 Hedef Konum Seç</h3>
+                <div class="modal-header-right">
+                    <select id="gotoTargetSelect" class="form-input compact-select">
+                        <option value="__current__">Mevcut Drone</option>
+                    </select>
+                    <span id="gotoCoordDisplay" class="mono"></span>
+                    <button class="btn-icon" onclick="closeGotoMapModal()">✕</button>
+                </div>
+            </div>
+            <div id="gotoMapContainer" class="modal-map"></div>
+            <div class="modal-footer">
+                <div class="map-legend">
+                    🖱️ Tıklayarak hedef seçin &nbsp;
+                    <span style="color:var(--green);">●</span> Drone'lar &nbsp;
+                    <span style="color:var(--red);">🎯</span> Hedef
+                </div>
+
+                <!-- Hassas Konumlandırma (Goto) -->
+                <div class="nudge-bar"
+                    style="display:flex; align-items:center; gap:8px; margin-top:6px; padding-top:6px; border-top:1px dashed var(--border);">
+                    <div style="font-size:11px; color:#666;">Hassas (m):</div>
+                    <input type="number" id="nudgeDistGoto" value="1" min="0.1" step="0.1"
+                        style="width:50px; padding:2px; font-size:12px;">
+
+                    <div style="display:flex; gap:2px;">
+                        <button class="btn btn-outline btn-sm" style="padding:0 6px;"
+                            onclick="nudgeGotoMap(270)">⬅</button>
+                        <button class="btn btn-outline btn-sm" style="padding:0 6px;"
+                            onclick="nudgeGotoMap(0)">⬆</button>
+                        <button class="btn btn-outline btn-sm" style="padding:0 6px;"
+                            onclick="nudgeGotoMap(180)">⬇</button>
+                        <button class="btn btn-outline btn-sm" style="padding:0 6px;"
+                            onclick="nudgeGotoMap(90)">➡</button>
+                    </div>
+                </div>
+                <div class="saved-locations-bar">
+                    <select id="gotoSavedLocSelect" class="form-input compact-select"
+                        onchange="applySavedLocation(this.value, 'goto')">
+                        <option value="">📌 Kayıtlı Konumlar</option>
+                    </select>
+                    <button class="btn btn-outline btn-sm" onclick="saveCurrentLocation('goto')"
+                        title="Bu konumu kaydet">💾</button>
+                    <button class="btn btn-outline btn-sm" onclick="deleteSelectedLocation('gotoSavedLocSelect')"
+                        title="Seçili konumu sil" style="color:var(--red)">🗑️</button>
+                </div>
+                <button class="btn btn-primary" onclick="confirmGotoLocation()">🎯 Konuma Gönder</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="modal-overlay" id="shortcutsModalOverlay" onclick="this.classList.remove('active')">
+        <div class="modal" onclick="event.stopPropagation()" style="max-width:420px;">
+            <div class="modal-header">
+                <h3>⌨️ Klavye Kısayolları</h3>
+                <button class="btn-icon" onclick="document.getElementById('shortcutsModalOverlay').classList.remove('active')">✕</button>
+            </div>
+            <div style="padding:16px; font-size:13px;">
+                <table class="shortcuts-table">
+                    <tr><td><kbd>Space</kbd></td><td>ARM / DISARM toggle</td></tr>
+                    <tr><td><kbd>G</kbd></td><td>GUIDED mod</td></tr>
+                    <tr><td><kbd>R</kbd></td><td>RTL mod</td></tr>
+                    <tr><td><kbd>L</kbd></td><td>LAND mod</td></tr>
+                    <tr><td><kbd>T</kbd></td><td>Takeoff</td></tr>
+                    <tr><td><kbd>1</kbd>-<kbd>9</kbd></td><td>Drone seçimi</td></tr>
+                    <tr><td><kbd>Ctrl+S</kbd></td><td>Senaryo kaydet</td></tr>
+                    <tr><td><kbd>?</kbd></td><td>Kısayollar</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.6.0/split.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+    <script src="/static/sim_params.js"></script>
+    <script src="/static/full_params.js"></script>
+    <script src="/static/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Horizontal Split (Left / Right)
+            Split(['.split-left', '.split-right'], {
+                sizes: [25, 75],
+                minSize: [200, 300],
+                gutterSize: 6,
+                cursor: 'col-resize'
+            });
+
+            // Vertical Split (Top / Bottom in Right Panel)
+            Split(['.right-top-panel', '.right-bottom-panel'], {
+                direction: 'vertical',
+                sizes: [65, 35],
+                minSize: [150, 100],
+                gutterSize: 6,
+                cursor: 'row-resize'
+            });
+        });
+    </script>
+</body>
+
+</html>
