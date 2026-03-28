@@ -54,7 +54,7 @@ fi
 echo "==> [7/8] Çalışma ortamı ayar dosyası yazılıyor..."
 cat > "${PROJECT_DIR}/.env.termux" <<EOF
 export SITL_RUNTIME_MODE=host
-export SIM_VEHICLE_CMD="${SIM_VEHICLE_DEFAULT}"
+export SIM_VEHICLE_CMD="python3 ${SIM_VEHICLE_DEFAULT}"
 export FLASK_ENV=development
 EOF
 
@@ -73,6 +73,11 @@ cd "${PROJECT_DIR}"
 python manage.py runserver 0.0.0.0:8181
 EOF
 chmod +x "${PROJECT_DIR}/run_termux.sh"
+
+if [[ ! -f "${SIM_VEHICLE_DEFAULT}" ]]; then
+  echo "UYARI: sim_vehicle.py bulunamadı: ${SIM_VEHICLE_DEFAULT}"
+  echo "ArduPilot dizinini doğrulayın veya .env.termux içinde SIM_VEHICLE_CMD değerini güncelleyin."
+fi
 
 cat <<EOM
 

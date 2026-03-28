@@ -55,6 +55,29 @@ def is_docker_runtime():
     return mode == 'docker'
 
 
+def resolve_sim_vehicle_cmd():
+    """
+    Host modunda sim_vehicle komutunu daha toleranslı çöz.
+    - Kullanıcı SIM_VEHICLE_CMD verdiyse onu kullan.
+    - Aksi halde bilinen path'leri dene.
+    """
+    cmd = (SIM_VEHICLE_CMD or '').strip()
+    if cmd and cmd != 'sim_vehicle.py':
+        return cmd
+
+    candidates = [
+        'sim_vehicle.py',
+        os.path.join(os.getcwd(), 'Tools', 'autotest', 'sim_vehicle.py'),
+        os.path.expanduser('~/ardupilot/Tools/autotest/sim_vehicle.py'),
+    ]
+    for c in candidates:
+        if c == 'sim_vehicle.py' and shutil.which('sim_vehicle.py'):
+            return c
+        if c != 'sim_vehicle.py' and os.path.exists(c):
+            return f'python3 "{c}"'
+    return cmd or 'sim_vehicle.py'
+
+
 def init_services(_socketio, _mavlink_svc, _flight_logger):
     global socketio, mavlink_svc, flight_logger
     socketio = _socketio
@@ -279,7 +302,8 @@ def _start_drone_process(instance_id, ip_addresses, vehicle_type, custom_locatio
     out_params = ' '.join([f'--out=udp:{ip}' for ip in ip_addresses])
     if mavlink_svc and mavlink_svc.available:
         out_params += f' --out=udp:{mavlink_svc.get_out_address(instance_id)}'
-    sim_cmd = f'{SIM_VEHICLE_CMD} -v {vehicle_type} -I{instance_id} --no-rebuild {out_params}'
+    sim_vehicle_cmd = SIM_VEHICLE_CMD if is_docker_runtime() else resolve_sim_vehicle_cmd()
+    sim_cmd = f'{sim_vehicle_cmd} -v {vehicle_type} -I{instance_id} --no-rebuild {out_params}'
 
     if custom_location:
         if isinstance(custom_location, str):
