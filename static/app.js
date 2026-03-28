@@ -139,6 +139,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initSplitView() {
+    if (window.innerWidth <= 900 || typeof Split === 'undefined') {
+        return;
+    }
     Split(['.split-left', '.split-right'], {
         sizes: [25, 75],
         minSize: [200, 300],
@@ -157,6 +160,8 @@ function initSplitView() {
 
 function updateContainerUI(data) {
     const isRunning = data.status === 'running';
+    const runtimeLabel = data.runtime_label || (data.runtime_mode === 'host' ? 'Yerel (Termux/Host)' : 'Docker');
+    const isDockerMode = (data.runtime_mode || 'docker') === 'docker';
 
     // Header Elements
     const badge = document.getElementById('containerStatusBadge');
@@ -171,7 +176,7 @@ function updateContainerUI(data) {
         badge.style.color = isRunning ? 'var(--green)' : 'var(--red)';
     }
     if (text) {
-        text.textContent = isRunning ? 'SİMÜLATÖR AKTİF' : 'SİMÜLATÖR DURDU';
+        text.textContent = isRunning ? `${runtimeLabel} AKTİF` : `${runtimeLabel} PASİF`;
         text.style.color = isRunning ? 'var(--green)' : 'var(--red)';
         text.style.fontWeight = '700';
     }
@@ -196,6 +201,20 @@ function updateContainerUI(data) {
     const btnStop = document.getElementById('btnContainerStop');
     if (btnStart) btnStart.disabled = isRunning;
     if (btnStop) btnStop.disabled = !isRunning;
+
+    const runtimeInput = document.getElementById('runtimeModeLabel');
+    if (runtimeInput) runtimeInput.value = runtimeLabel;
+
+    const dockerImage = document.getElementById('dockerImage');
+    if (dockerImage) {
+        dockerImage.disabled = !isDockerMode;
+        dockerImage.title = isDockerMode ? '' : 'Yerel modda Docker image kullanılmaz';
+    }
+
+    const runtimeTitle = document.getElementById('runtimeSectionTitle');
+    if (runtimeTitle) {
+        runtimeTitle.textContent = isDockerMode ? '🐳 Çalışma Ortamı (Docker)' : '📱 Çalışma Ortamı (Yerel)';
+    }
 }
 
 async function fetchContainerStatus() {
@@ -1397,7 +1416,7 @@ function toggleSidebarSection(header) {
 
     // Docker bölümü ise diğerlerini kapatmasın, 
     // Diğer bölümler de Docker'ı kapatmasın.
-    const isDocker = header.textContent.includes('Docker');
+    const isDocker = header.textContent.includes('Docker') || header.textContent.includes('Çalışma Ortamı');
 
     if (!isDocker) {
         // Sadece Docker OLMAYAN diğer bölümleri kapat (Drone ve Senaryolar arası accordion)

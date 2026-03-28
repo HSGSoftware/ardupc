@@ -34,7 +34,7 @@ def api_drones_list():
 def api_drone_start():
     import core
     if container_state['status'] != 'running':
-        return jsonify({'success': False, 'message': 'Önce container başlatın'}), 400
+        return jsonify({'success': False, 'message': 'Önce simülatör çalışma ortamını başlatın'}), 400
     data = request.json or {}
     used_ids = set()
     with drone_lock:

@@ -31,7 +31,7 @@ body {
 .map-layout {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100dvh;
 }
 
 /* ==================== HEADER ==================== */
@@ -608,6 +608,41 @@ body {
 .map-container {
     flex: 1;
     min-width: 0;
+}
+
+@media (max-width: 900px) {
+    .map-header {
+        flex-wrap: wrap;
+        padding: 8px 10px;
+    }
+
+    .map-header h1 {
+        font-size: 14px;
+    }
+
+    .header-actions,
+    .header-status {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .map-main {
+        flex-direction: column;
+    }
+
+    .control-panel,
+    .telemetry-panel {
+        width: 100%;
+        min-width: 100%;
+        max-height: 34dvh;
+        border-left: none;
+        border-right: none;
+    }
+
+    .map-container {
+        min-height: 32dvh;
+    }
 }
 
 /* ==================== TELEMETRY PANEL ==================== */
